@@ -8,9 +8,10 @@ Gem::Specification.new do |spec|
   spec.version       = CocoapodsLinkline::VERSION
   spec.authors       = ['youhui']
   spec.email         = ['developer_yh@163.com']
-  spec.description   = %q{A short description of cocoapods-linkline.}
-  spec.summary       = %q{A longer description of cocoapods-linkline.}
-  spec.homepage      = 'https://github.com/EXAMPLE/cocoapods-linkline'
+  spec.description   = %q{A plug-in that can customize component dependencies, static libraries/dynamic libraries.}
+  spec.summary       = %q{use :linkages => dynimic to define component all child dependencies with dynimic framework. \
+                          use :linkage => static to component self with static framework.}
+  spec.homepage      = 'https://github.com/ymoyao/cocoapods-linkline'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files`.split($/)
