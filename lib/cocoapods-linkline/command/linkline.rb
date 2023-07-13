@@ -6,12 +6,12 @@ class Pod::Installer::Analyzer
     def generate_pod_targets(resolver_specs_by_target, target_inspections)
         targets = ll_original_generate_pod_targets(resolver_specs_by_target, target_inspections)
         targets.each { |target|
-            ll_rebuild_linkage(target,target,nil)
+            ll_rebuild_linkage(target,target)
         }
         targets
     end
 
-    def ll_rebuild_linkage(pod_target,root_pod_target,build_type) 
+    def ll_rebuild_linkage(pod_target,root_pod_target) 
         ll_linkage,is_linkage_all = ll_fetch_linkage_from(pod_target)
         if ll_linkage
             build_type = ll_create_build_type_from(pod_target,ll_linkage)
