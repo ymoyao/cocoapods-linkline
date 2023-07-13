@@ -9,8 +9,20 @@ Gem::Specification.new do |spec|
   spec.authors       = ['youhui']
   spec.email         = ['developer_yh@163.com']
   spec.description   = %q{A plug-in that can customize component dependencies, static libraries/dynamic libraries.}
-  spec.summary       = %q{use :linkages => dynimic to define component all child dependencies with dynimic framework. \
-                          use :linkage => static to component self with static framework.}
+  spec.summary       = %q{
+    Build the component and all child inherit dependencies with dynamic framework
+
+    pod 'xxx', :linkages => :dynamic 
+    Build the component itself with a dynamic framework
+    
+    pod 'xxx', :linkage => :dynamic 
+    Build the component and all child inherit dependencies with static framework
+    
+    pod 'xxx', :linkages => :static 
+    Build the component itself with a static framework
+    
+    pod 'xxx', :linkage => :static 
+  }
   spec.homepage      = 'https://github.com/ymoyao/cocoapods-linkline'
   spec.license       = 'MIT'
 
