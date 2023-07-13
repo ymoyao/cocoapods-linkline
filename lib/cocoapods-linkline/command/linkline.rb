@@ -2,9 +2,9 @@ require 'cocoapods'
 require 'cocoapods/user_interface'
 
 class Pod::Installer::Analyzer
-    alias_method :original_generate_pod_targets, :generate_pod_targets
+    alias_method :ll_original_generate_pod_targets, :generate_pod_targets
     def generate_pod_targets(resolver_specs_by_target, target_inspections)
-        targets = original_generate_pod_targets(resolver_specs_by_target, target_inspections)
+        targets = ll_original_generate_pod_targets(resolver_specs_by_target, target_inspections)
         targets.each { |target|
             ll_rebuild_linkage(target,target,nil)
         }

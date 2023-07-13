@@ -21,13 +21,13 @@ module Pod
                 pod_linkage
             end
 
-            original_parse_inhibit_warnings = instance_method(:parse_inhibit_warnings)
+            ll_original_parse_inhibit_warnings = instance_method(:parse_inhibit_warnings)
             define_method(:parse_inhibit_warnings) do |name, requirements|
                 @linkage ||= {}
                 @linkages ||= {}
                 @linkage = @linkage.merge(ll_expedition_linkages(name, requirements,:linkage))
                 @linkages = @linkages.merge(ll_expedition_linkages(name, requirements,:linkages))
-                original_parse_inhibit_warnings.bind(self).call(name, requirements)
+                ll_original_parse_inhibit_warnings.bind(self).call(name, requirements)
             end
         end
     end
