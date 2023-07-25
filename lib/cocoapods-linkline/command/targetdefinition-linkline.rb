@@ -29,17 +29,6 @@ module Pod
                 @linkages = @linkages.merge(ll_expedition_linkages(name, requirements,:linkages))
                 ll_original_parse_inhibit_warnings.bind(self).call(name, requirements)
             end
-
-            option = { :skip_verify_static_framework => true } # 或者您可以设置其他默认值
-            alias_method :ll_origin_use_frameworks!, :use_frameworks!
-            def use_frameworks!(option = true)
-                case option
-                        when Hash
-                            $ll_no_check_static = option.delete(:skip_verify_static_framework)                            
-                        end
-                end
-                ll_origin_use_frameworks!(option)
-            end
         end
     end
 end
