@@ -7,7 +7,7 @@ class Pod::Installer::Analyzer
         targets = ll_original_generate_pod_targets(resolver_specs_by_target, target_inspections)
         targets.each { |target|
             ll_rebuild_linkage(target,target)
-        } unless installation_options.disable_linkline_on_debug? && $ll_has_local_path == true
+        } unless installation_options.skip_linkline_on_local? && $ll_has_local_path
         targets
     end
 
