@@ -6,8 +6,8 @@ module Pod
         # Whether to skip verify dynimic framework linked static frameworks. defalut is verify
         option :skip_verify_static_framework, false
 
-        # Whether to disable linkline framework on debug config
-        option :disable_linkline_on_debug, false
+        # Whether to disable linkline framework on local 
+        option :skip_linkline_on_local, false
       end
 
       class Xcode
