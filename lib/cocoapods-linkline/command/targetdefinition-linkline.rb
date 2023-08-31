@@ -23,8 +23,8 @@ module Pod
 
             ll_original_parse_inhibit_warnings = instance_method(:parse_inhibit_warnings)
             define_method(:parse_inhibit_warnings) do |name, requirements|
-                if requirements.last && requirements.last.has_key?(:path)
-                    $ll_has_local_path = true 
+                if (requirements.last.is_a? Hash) && requirements.last.has_key?(:path) 
+                    $ll_has_local_path = true
                 end
                 @linkage ||= {}
                 @linkages ||= {}
