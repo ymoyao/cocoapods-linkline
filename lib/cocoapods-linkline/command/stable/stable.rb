@@ -58,10 +58,9 @@ module Pod
           #5、rewirte local_stable_lock with origin_stable_lock
           ll_rewirte_stable_lock(origin)
         end
+
   
         private
-
-
         ######################################## API ########################################
         def ll_load_stable
           unless File.exist?(File.join(Pathname.pwd, "Podfile"))
@@ -237,11 +236,11 @@ module Pod
             specs_1.delete(matching_project_1) if matching_project_1
           end
 
+          #处理远端删除某个锁的情况
           specs_1.each do |project_1|
             project_name_1, version_1 = project_1
             deleted_projects << "【#{project_name_1}】 (#{"delete".send(:red)}) <- (#{version_1})"
           end unless specs_1.empty?
-        
           return added_projects, updated_projects, rollbacked_projects, deleted_projects
         end
 
