@@ -50,23 +50,25 @@ module Pod
         def ll_show_lock_diff(stable_lock_arr, stable_lock_origin_arr)
           added, updated, rollbacked = ll_compare_specs(stable_lock_arr, stable_lock_origin_arr)
 
+          #31m: 红色 32m:绿色 33m:黄色 34m:蓝色
+          #puts "\e[34m#{string}\e[0m"
           if added.any?
-            puts "\n新增了以下项目:"
+            puts "\n新增了以下项目:".send(:green)
             puts added.join("\n")
           end
 
           if updated.any?
-            puts "\n更新了以下项目:"
+            puts "\n更新了以下项目:".send(:blue)
             puts updated.join("\n")
           end
 
           if rollbacked.any?
-            puts "\n回滚了以下项目:"
+            puts "\n回滚了以下项目:".send(:red)
             puts rollbacked.join("\n")
           end
 
           unless added.any? || updated.any? || added.any?
-            puts "\n已经是最新版本"
+            puts "\n已经是最新版本".send(:green)
           end
         end
 
