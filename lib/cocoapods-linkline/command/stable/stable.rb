@@ -1,54 +1,126 @@
 module Pod
+
+    # class StableOptions
+    #   # define business specs,defalut is stable_specs
+    #   option :business_specs, "stable_specs"
+
+    #   # define custom lockSpecs tag
+    #   option :tag, ""
+
+    #   # define custom lockSpecs branch
+    #   option :branch, ""
+    # end
+
     class Command
       class Stable < Command
         require 'fileutils'
         require 'cocoapods/executable.rb'
         extend Executable
         executable :git
-  
-        self.summary = 'a cocoapods plugin to fetch origin lock'
 
-        def initialize(argv)
-          super
+        ######################################## Env ########################################
+        def env
+          File.join(File.expand_path('~/.cache'), 'cocoapods-linkline','stable',@ll_stable_source.split('/').last.chomp('.git').to_s)
         end
+
+        
+        ######################################## Constant ########################################
+        def ll_stable_specs_func_name
+          "stable_specs" 
+        end
+        def ll_stable_specs_business_func_name 
+          "stable_specs_business" 
+        end
+        def ll_stable_specs_local_func_name
+          "stable_specs_lock" 
+        end
+
+        self.summary = 'a cocoapods plugin to fetch origin lock'
   
+
+        ######################################## Main ########################################
         def run
-          #1、first create stable_lock.rb if no exit, and input a template function for the podfile
-          ll_create_stable_lock_template
+          #1、first load source and origin lock name from podfile
+          ll_load_stable
 
-          #2、load podfile to fetch ll_stable_source and ll_stable_lock_origin
-          verify_podfile_exists!
-
-          #3、clone module to cache dir 
+          #2、clone origin lock spec to cache dir 
           ll_cloneStable
 
-          #4、fetch newest code
+          #3、fetch newest code
           git_reset
           git_pull
 
-          require File.join(Pathname.pwd,"#{ll_stable_lock}.rb")
-          require File.join(env, "#{$ll_stable_lock_origin}.rb")
-          stable_lock_arr = eval("#{ll_stable_lock}")
-          stable_lock_origin_arr =  eval("#{$ll_stable_lock_origin}")
-          #5、show origin_stable_lock diff with local_stable_lock
-          ll_show_lock_diff(stable_lock_arr, stable_lock_origin_arr)
+          local = ll_fetch_local_stable_datas
+          origin = ll_fetch_origin_stable_datas
+          #4、show origin_stable_lock diff with local_stable_lock
+          ll_show_lock_diff(local, origin)
 
-          #6、rewirte local_stable_lock with origin_stable_lock
-          ll_rewirte_stable_lock(stable_lock_origin_arr)
+          #5、rewirte local_stable_lock with origin_stable_lock
+          ll_rewirte_stable_lock(origin)
         end
   
         private
-        # API
+
+
+        ######################################## API ########################################
+        def ll_load_stable
+          unless File.exist?(File.join(Pathname.pwd, "Podfile"))
+            err_msg = "- Error: #{File.join(Pathname.pwd, "Podfile")} is not exit"
+            Pod::UI.puts "#{err_msg}".send(:red)
+            exit -9001
+          end
+          
+          matches = File.read(File.join(Pathname.pwd, "Podfile")).match(/^\s*stable!\s*'([^']+)'(?:,\s*(\w+):\s*'([^']+)')*/m)
+          unless matches
+            err_msg = "- Error: not stable define in the podfile! you can define like【stable 'https://git.babybus.co/babybus/ios/Specs/stable-specs.git', specs:'global_stable_specs'】in podfile"
+            Pod::UI.puts "#{err_msg}".send(:red)
+            exit -9002
+          end
+
+          eval(matches.to_s)
+        end
+
         def ll_cloneStable
           unless Dir.exist?(File.join(env))
             clonePath = File.dirname(env)
             FileUtils.mkdir_p clonePath
-            git_clone($ll_stable_source,clonePath)
+            git_clone(@ll_stable_source,clonePath)
           end
         end
 
-        def ll_show_lock_diff(stable_lock_arr, stable_lock_origin_arr)
-          added, updated, rollbacked = ll_compare_specs(stable_lock_arr, stable_lock_origin_arr)
+        def ll_fetch_local_stable_datas
+          ll_create_stable_lock_template_if_need
+          eval(ll_stable_specs_local_func_name)
+        end
+
+        def ll_fetch_origin_stable_datas
+          unless File.exist?(File.join(env, "#{@ll_stable_file}.rb"))
+            err_msg = "- Error: #{@ll_stable_file}.rb is not exit in #{@ll_stable_source}"
+            Pod::UI.puts "#{err_msg}".send(:red)
+            exit -9003
+          end
+
+          require File.join(env, "#{@ll_stable_file}.rb")
+
+          if @ll_stable_file == ll_stable_specs_func_name #兼容默认只使用公共仓库锁的情况
+            unless defined?(stable_specs)
+              err_msg = "- Error: #{ll_stable_specs_func_name} function is not exit in #{@ll_stable_file}.rb"
+              Pod::UI.puts "#{err_msg}".send(:red)
+              exit -9004
+            end
+            eval(ll_stable_specs_func_name)
+          else        
+            unless defined?(stable_specs_business)
+              err_msg = "- Error: #{ll_stable_specs_business_func_name} function is not exit in #{@ll_stable_file}.rb"
+              Pod::UI.puts "#{err_msg}".send(:red)
+              exit -9005
+            end
+            eval(ll_stable_specs_business_func_name)
+          end   
+        end
+
+        def ll_show_lock_diff(local_arr, origin_arr)
+          added, updated, rollbacked, deleted = ll_compare_specs(local_arr, origin_arr)
 
           #31m: 红色 32m:绿色 33m:黄色 34m:蓝色
           #puts "\e[34m#{string}\e[0m"
@@ -58,7 +130,7 @@ module Pod
           end
 
           if updated.any?
-            puts "\n更新了以下项目:".send(:yellow)
+            puts "\n更新了以下项目:". send(:yellow)
             puts updated.join("\n")
           end
 
@@ -67,14 +139,19 @@ module Pod
             puts rollbacked.join("\n")
           end
 
-          unless added.any? || updated.any? || added.any?
+          if deleted.any?
+            puts "\n移除了以下项目:".send(:red)
+            puts deleted.join("\n")
+          end
+
+          unless added.any? || updated.any? || added.any? || deleted.any?
             puts "\n已经是最新版本".send(:green)
           end
         end
 
         def ll_rewirte_stable_lock(stable_lock_origin_arr)
-            File.open("#{ll_stable_lock}.rb", 'w') do |file|
-              file.puts "def #{ll_stable_lock}"
+            File.open("#{ll_stable_specs_local_func_name}.rb", 'w') do |file|
+              file.puts "def #{ll_stable_specs_local_func_name}"
               file.puts "["
               stable_lock_origin_arr.each_with_index do |spec, index|
                 if index == stable_lock_origin_arr.length - 1
@@ -88,43 +165,23 @@ module Pod
             end          
         end
 
-        def ll_compare_specs(specs_1, specs_2)
-          added_projects = []
-          updated_projects = []
-          rollbacked_projects = []
-        
-          specs_2.each do |project_2|
-            project_name_2, version_2 = project_2
-            matching_project_1 = specs_1.find { |project_1| project_1[0] == project_name_2 }
-        
-            if matching_project_1.nil?
-              added_projects << "【#{project_name_2}】 (#{version_2.to_s.send(:green)})"
-            elsif matching_project_1[1] != version_2
-              if versionGreat(version_2,matching_project_1[1])
-                updated_projects << "【#{project_name_2}】 (#{matching_project_1[1]}) -> (#{version_2.to_s.send(:yellow)})"
-              else
-                rollbacked_projects << "【#{project_name_2}】 (#{version_2.to_s.send(:red)}) <- (#{matching_project_1[1]})"
-              end
-            end
-          end
-        
-          return added_projects, updated_projects, rollbacked_projects
-        end
-
-        def ll_create_stable_lock_template
-          unless File.exist?(File.join(Pathname.pwd,"#{ll_stable_lock}.rb"))
-            Dir.chdir(Pathname.pwd) {
-              File.open("#{ll_stable_lock}.rb", 'w') do |file|
-                file.puts "def #{ll_stable_lock}"
-                file.puts "["
-                file.puts "]"
-                file.puts "end"
-              end
-            }
+        def ll_create_stable_lock_template_if_need
+          lockfilePath = File.join(Pathname.pwd,"#{ll_stable_specs_local_func_name}.rb")
+          require lockfilePath if File.exist?(lockfilePath)
+          unless File.exist?(lockfilePath) && defined?(stable_specs_lock)#判断方法是否存在只能使用 固定字符，不能通过变量间接判断
+              Dir.chdir(Pathname.pwd) {
+                File.open("#{ll_stable_specs_local_func_name}.rb", 'w') do |file|
+                  file.puts "def #{ll_stable_specs_local_func_name}"
+                  file.puts "["
+                  file.puts "]"
+                  file.puts "end"
+                end
+              }
           end
         end
 
-        #####help
+
+        ######################################## Help ########################################
         # compare tags (>=)
         def versionGreatOrEqual(tag1, tag2)
           tags1 = tag1.split(".")
@@ -157,21 +214,51 @@ module Pod
           return result
         end
 
-        ##### constant
-        def ll_stable_lock
-          "stable_lock"
+        # compare specs
+        def ll_compare_specs(specs_1, specs_2)
+          added_projects = []
+          updated_projects = []
+          rollbacked_projects = []
+          deleted_projects = []
+        
+          specs_2.each do |project_2|
+            project_name_2, version_2 = project_2
+            matching_project_1 = specs_1.find { |project_1| project_1[0] == project_name_2 }
+        
+            if matching_project_1.nil?
+              added_projects << "【#{project_name_2}】 (#{version_2.to_s.send(:green)})"
+            elsif matching_project_1[1] != version_2
+              if versionGreat(version_2,matching_project_1[1])
+                updated_projects << "【#{project_name_2}】 (#{matching_project_1[1]}) -> (#{version_2.to_s.send(:yellow)})"
+              else
+                rollbacked_projects << "【#{project_name_2}】 (#{version_2.to_s.send(:red)}) <- (#{matching_project_1[1]})"
+              end
+            end
+            specs_1.delete(matching_project_1) if matching_project_1
+          end
+
+          specs_1.each do |project_1|
+            project_name_1, version_1 = project_1
+            deleted_projects << "【#{project_name_1}】 (#{"delete".send(:red)}) <- (#{version_1})"
+          end unless specs_1.empty?
+        
+          return added_projects, updated_projects, rollbacked_projects, deleted_projects
         end
 
-        ##### env
-        def env
-            File.join(File.expand_path('~/.cache'), 'cocoapods-linkline','stable',$ll_stable_source.split('/').last.chomp('.git').to_s)
+        #help load podfile option
+        def stable!(source, options = {})
+          @ll_stable_source = source
+          if options.has_key?(:specs) 
+            @ll_stable_file = options[:specs] 
+          else
+            @ll_stable_file = ll_stable_specs_func_name
+          end
+          @ll_stable_tag = options[:tag] if options.has_key?(:tag) 
+          @ll_stable_branch = options[:branch] if options.has_key?(:branch) 
         end
 
-        def ll_stable_lock_fold
-          File.dirname(Pod::Config.instance.podfile_path)
-        end
 
-        ##### git command 
+        ######################################## Git Command  ########################################
         def git(*args)
          Dir.chdir(File.join(env)) { 
           return git! args 
@@ -191,7 +278,6 @@ module Pod
               Dir.chdir(path) { git! ['clone', source] } #origin git command
             end
         end
-    
       end
     end
   end
