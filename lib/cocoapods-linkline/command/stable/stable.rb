@@ -58,7 +58,7 @@ module Pod
           end
 
           if updated.any?
-            puts "\n更新了以下项目:".send(:blue)
+            puts "\n更新了以下项目:".send(:yellow)
             puts updated.join("\n")
           end
 
@@ -101,7 +101,7 @@ module Pod
               added_projects << "【#{project_name_2}】 (#{version_2.to_s.send(:green)})"
             elsif matching_project_1[1] != version_2
               if versionGreat(version_2,matching_project_1[1])
-                updated_projects << "【#{project_name_2}】 (#{matching_project_1[1]}) -> (#{version_2.to_s.send(:blue)})"
+                updated_projects << "【#{project_name_2}】 (#{matching_project_1[1]}) -> (#{version_2.to_s.send(:yellow)})"
               else
                 rollbacked_projects << "【#{project_name_2}】 (#{version_2.to_s.send(:red)}) <- (#{matching_project_1[1]})"
               end
