@@ -23,7 +23,8 @@ module Pod
           ll_cloneStable
 
           #4、fetch newest code
-          git_fetch
+          git_reset
+          git_pull
 
           require File.join(Pathname.pwd,"#{ll_stable_lock}.rb")
           require File.join(env, "#{$ll_stable_lock_origin}.rb")
@@ -50,18 +51,18 @@ module Pod
           added, updated, rollbacked = ll_compare_specs(stable_lock_arr, stable_lock_origin_arr)
 
           if added.any?
-            puts "新增了以下项目:"
+            puts "\n新增了以下项目:"
             puts added.join("\n")
           end
 
           if updated.any?
             puts "\n更新了以下项目:"
-            puts updated.join("\n") 
+            puts updated.join("\n")
           end
 
           if rollbacked.any?
             puts "\n回滚了以下项目:"
-            puts rollbacked.join("\n") 
+            puts rollbacked.join("\n")
           end
 
           unless added.any? || updated.any? || added.any?
@@ -95,10 +96,10 @@ module Pod
             matching_project_1 = specs_1.find { |project_1| project_1[0] == project_name_2 }
         
             if matching_project_1.nil?
-              added_projects << "【#{project_name_2}】 (#{version_2.to_s.send(:red)})"
+              added_projects << "【#{project_name_2}】 (#{version_2.to_s.send(:green)})"
             elsif matching_project_1[1] != version_2
               if versionGreat(version_2,matching_project_1[1])
-                updated_projects << "【#{project_name_2}】 (#{matching_project_1[1]}) -> (#{version_2.to_s.send(:red)})"
+                updated_projects << "【#{project_name_2}】 (#{matching_project_1[1]}) -> (#{version_2.to_s.send(:blue)})"
               else
                 rollbacked_projects << "【#{project_name_2}】 (#{version_2.to_s.send(:red)}) <- (#{matching_project_1[1]})"
               end
@@ -170,11 +171,17 @@ module Pod
 
         ##### git command 
         def git(*args)
-         Dir.chdir(File.join(env)) { return git! args }
+         Dir.chdir(File.join(env)) { 
+          return git! args 
+        }
         end
 
-        def git_fetch 
-           git('fetch') #fommate git command
+        def git_reset 
+          git('reset','--hard') #fommate git command
+        end
+
+        def git_pull 
+           git('pull','origin','main','-f') #fommate git command
         end
 
         def git_clone(source, path)
