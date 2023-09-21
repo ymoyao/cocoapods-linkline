@@ -48,7 +48,8 @@ module Pod
 
           #3、fetch newest code
           git_reset
-          git_pull
+          git_fetch
+          git_checkout_and_pull
 
           local = ll_fetch_local_stable_datas
           origin = ll_fetch_origin_stable_datas
@@ -68,7 +69,7 @@ module Pod
             Pod::UI.puts "#{err_msg}".send(:red)
             exit -9001
           end
-          
+
           matches = File.read(File.join(Pathname.pwd, "Podfile")).match(/^\s*stable!\s*'([^']+)'(?:,\s*(\w+):\s*'([^']+)')*/m)
           unless matches
             err_msg = "- Error: not stable define in the podfile! you can define like【stable 'https://git.babybus.co/babybus/ios/Specs/stable-specs.git', specs:'global_stable_specs'】in podfile"
@@ -268,8 +269,42 @@ module Pod
           git('reset','--hard') #fommate git command
         end
 
-        def git_pull 
-           git('pull','origin','main','-f') #fommate git command
+        def git_fetch 
+          git('fetch') #fommate git command
+        end
+
+        def git_checkout_and_pull 
+          if defined? @ll_stable_branch
+            unless git_branch_exists?(@ll_stable_branch)
+              err_msg = "- Error: #{@ll_stable_source} did not exit branch #{@ll_stable_branch}"
+              Pod::UI.puts "#{err_msg}".send(:red)
+              exit -9006
+            end
+
+            git('checkout',@ll_stable_branch) #fommate git command
+            git('pull','origin',@ll_stable_branch,'-f') #fommate git command
+          elsif defined? @ll_stable_tag
+            unless git_tag_exists?(@ll_stable_tag)
+              err_msg = "- Error: #{@ll_stable_source} did not exit tag #{@ll_stable_tag}"
+              Pod::UI.puts "#{err_msg}".send(:red)
+              exit -9007
+            end
+
+            git('checkout',@ll_stable_tag) #fommate git command
+          else
+            protechBranch = git('symbolic-ref','refs/remotes/origin/HEAD').split("/").last.strip || "main"
+            git('checkout',protechBranch)
+            git('pull','origin',protechBranch,'-f')
+          end
+        end
+
+        def git_tag_exists?(tag)
+            git('tag').split("\n").include?(tag)
+        end
+
+        def git_branch_exists?(branch)
+            branchs = git('branch','-a').split("\n")
+            branchs.include?(branch) || branchs.include?('  remotes/origin/' + branch) || branchs.include?('remotes/origin/' + branch)
         end
 
         def git_clone(source, path)
