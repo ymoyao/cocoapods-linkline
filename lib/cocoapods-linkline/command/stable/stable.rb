@@ -70,14 +70,20 @@ module Pod
             exit -9001
           end
 
-          matches = File.read(File.join(Pathname.pwd, "Podfile")).match(/^\s*stable!\s*'([^']+)'(?:,\s*(\w+):\s*'([^']+)')*/m)
-          unless matches
-            err_msg = "- Error: not stable define in the podfile! you can define like【stable 'https://git.babybus.co/babybus/ios/Specs/stable-specs.git', specs:'global_stable_specs'】in podfile"
+          #获取podfile 内容
+          #1、删除所有注释行，避免干扰
+          #2、正则匹配，筛选出stable 方法
+          #3、执行stable 方法，获取配置
+          podfileContent = File.read(File.join(Pathname.pwd, "Podfile"))
+          podfileContent_vaild = podfileContent.lines.reject { |line| line.strip.start_with?("#") }.join
+          stableCommand = podfileContent_vaild.match(/^\s*stable!\s*'([^']+)'(?:,\s*(\w+):\s*'([^']+)')*/m)
+          unless stableCommand
+            err_msg = "- Error: not stable define in the podfile! you can define like【stable! 'https://git.babybus.co/babybus/ios/Specs/stable-specs.git', specs:'global_stable_specs'】in podfile"
             Pod::UI.puts "#{err_msg}".send(:red)
             exit -9002
           end
 
-          eval(matches.to_s)
+          eval(stableCommand.to_s)
         end
 
         def ll_cloneStable
