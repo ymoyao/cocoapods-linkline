@@ -18,6 +18,7 @@ module Pod
         extend Executable
         executable :git
 
+
         ######################################## Env ########################################
         def env
           File.join(File.expand_path('~/.cache'), 'cocoapods-linkline','stable',@ll_stable_source.split('/').last.chomp('.git').to_s)
@@ -35,10 +36,9 @@ module Pod
           "stable_specs_lock" 
         end
 
-        self.summary = 'a cocoapods plugin to fetch origin lock'
-  
 
         ######################################## Main ########################################
+        self.summary = 'a cocoapods plugin to fetch origin lock'
         def run
           #1、first load source and origin lock name from podfile
           ll_load_stable

@@ -1,9 +1,8 @@
 module Pod
     class Podfile
       module DSL
-        def stable(source,spce_name)
-            $ll_stable_source = source
-            $ll_stable_lock_origin = spce_name
+        #a func define to avoid pod command error
+        def stable!(source, options = {})
         end
       end
     end
