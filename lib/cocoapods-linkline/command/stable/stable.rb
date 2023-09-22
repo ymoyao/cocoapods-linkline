@@ -286,9 +286,8 @@ module Pod
               Pod::UI.puts "#{err_msg}".send(:red)
               exit -9006
             end
-
             git('checkout',@ll_stable_branch) #fommate git command
-            git('pull','origin',@ll_stable_branch,'-f') #fommate git command
+            git('reset','--hard',"origin/#{@ll_stable_branch}") #fommate git command
           elsif defined? @ll_stable_tag
             unless git_tag_exists?(@ll_stable_tag)
               err_msg = "- Error: #{@ll_stable_source} did not exit tag #{@ll_stable_tag}"
@@ -300,7 +299,7 @@ module Pod
           else
             protechBranch = git('symbolic-ref','refs/remotes/origin/HEAD').split("/").last.strip || "main"
             git('checkout',protechBranch)
-            git('pull','origin',protechBranch,'-f')
+            git('reset','--hard',"origin/#{protechBranch}") #fommate git command
           end
         end
 
