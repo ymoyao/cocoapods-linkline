@@ -69,13 +69,35 @@ module BB
                     busimess_data = busimessSpec.readData(business_config_file)
                 else
                     puts "业务线公共配置文件#{business_config_file}不存在，请确认!!!". send(:yellow)
+                    exit
                 end
             end
             if busimess_data
                 # 数据合并操作（策略：业务线公共盖通用数据，理论不存在该情况）
                 newData = common_data
+                listdata = newData[YAML_CONFIG_LIST_KEY]
+                removedata = newData[YAML_CONFIG_REMOVE_KEY]
+                dependenciesdata = newData[YAML_CONFIG_DEPENDENCIES_KEY]
                 busimess_data.each do | key, val|
-                    newData[key] = val
+                    if key == YAML_CONFIG_LIST_KEY
+                        if val.is_a?(Hash)
+                            val.each do |list_name,list_ver|
+                                listdata[list_name] = list_ver
+                            end
+                        end
+                    elsif key == YAML_CONFIG_REMOVE_KEY
+                        if val.is_a?(Array)
+                            val.each do |remove_name|
+                                removedata.push(remove_name)
+                            end
+                        end
+                    elsif key == YAML_CONFIG_DEPENDENCIES_KEY
+                        if val.is_a?(Hash)
+                            val.each do |dependencies_name,dependencies_val|
+                                dependenciesdata[dependencies_name] = dependencies_val
+                            end
+                        end
+                    end
                 end
                 return newData
             end
@@ -89,15 +111,11 @@ module BB
 
         # 合并stable数据
         def merge_stable_data()
-            local = fetch_local_stable_datas
-            origin = fetch_origin_stable_datas
-            puts "=====local:#{local}"
-            puts "=====origin:#{origin}"
             #4、show origin_stable_lock diff with local_stable_lock
-            compare_specs(local, origin)
+            new_stable_spec = compare_specs(fetch_local_stable_datas, fetch_origin_stable_datas)
 
             #5、rewirte local_stable_lock with origin_stable_lock
-            update_localstable_datas(origin)    
+            update_localstable_datas(new_stable_spec)    
         end
   
         ######################################## Help ########################################
@@ -109,26 +127,6 @@ module BB
                 return false
             end
             return true
-            # puts "===ver tag1:#{tag1} class:#{tag1.class} , tag2:#{tag2} class:#{tag2.class} "
-            # tags1 = tag1.to_s.split(".")
-            # tags2 = tag2.to_s.split(".")
-            
-            # # Fill in the missing bits so that both tags have the same number of bits
-            # max_length = [tags1.length, tags2.length].max
-            # tags1 += ["0"] * (max_length - tags1.length)
-            # tags2 += ["0"] * (max_length - tags2.length)
-            
-            # # Compare labels one by one from high to low
-            # (0...max_length).each do |i|
-            #     if tags1[i].to_i > tags2[i].to_i
-            #         return true
-            #     elsif tags1[i].to_i < tags2[i].to_i
-            #         return false
-            #     end
-            # end
-            
-            # # If all digits are equal, the labels are considered equal
-            # return true
         end
 
         # compare tags （>）
@@ -146,13 +144,17 @@ module BB
             updated_projects = []
             rollbacked_projects = []
             deleted_projects = []
-            new_specs = {}
+            new_specs = local_specs
 
             listdata = common_specs[YAML_CONFIG_LIST_KEY]
             removedata = common_specs[YAML_CONFIG_REMOVE_KEY]
             dependenciesdata = common_specs[YAML_CONFIG_DEPENDENCIES_KEY]
-            # step.1匹配组件版本信息
+
+            # puts "local_specs:#{local_specs}".send(:green)
+            # puts "common_specs:#{common_specs}".send(:green)
+            # step.1 匹配组件版本信息
             listdata.each do |name, version|
+                name = name.to_s
                 local_version = local_specs[name]
                 if local_version.nil?
                     # 本地不存在这个数据
@@ -166,28 +168,42 @@ module BB
                     new_specs[name] = version
                 end
             end
-            puts "listdata:#{listdata}".send(:green)
             # step.2 匹配组件新增
             dependenciesdata.each do |name, array|
+                name = name.to_s
                 version = listdata[name]
-                puts "name:#{name} version:#{version}"
-                if version.nil?
-                    puts "公共库缺少#{name}依赖 cls:#{listdata.class} listdata:#{listdata}".send(:red)
+                unless version
+                    puts "公共库缺少[#{name}]版本依赖 cls:#{listdata.class} listdata:#{listdata}".send(:red)
+                    exit
                 end
                 local_exist_ver = new_specs[name]
                 if local_exist_ver.nil?
                     new_specs[name] = version
                     added_projects << "【#{name}】 (#{version.to_s.send(:green)})"
                 end
-            end
-            # step.2 匹配组件移除
-            dependenciesdata.each do |name|
-                local_exist_ver = new_specs[name]
-                if local_exist_ver
-                    deleted_projects << "【#{name}】 (#{"delete".send(:red)}) <- (#{local_exist_ver})"
+                if array.is_a?(Array)
+                    array.each do |name|
+                        name = name.to_s
+                        local_exist_ver = new_specs[name]
+                        if local_exist_ver.nil?
+                            new_specs[name] = version
+                            added_projects << "【#{name}】 (#{version.to_s.send(:green)})"
+                        end
+                    end
                 end
             end
+            # step.3 匹配组件移除
+            removedata.each do |name|
+                name = name.to_s
+                # local_exist_ver = new_specs[name]
+                version = listdata[name]
+                if version
+                    deleted_projects << "【#{name}】 (#{"delete".send(:red)}) <- (#{version})"
+                end
+                new_specs.delete(name)
+            end
             showMergeLog(added_projects, updated_projects, rollbacked_projects, deleted_projects)
+            # puts "new_specs:#{new_specs}".send(:red)
             return new_specs
         end
 

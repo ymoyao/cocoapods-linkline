@@ -50,9 +50,9 @@ module BB
 
         def self.read_stable_lock_yaml(yml_path)
             if File.file?(yml_path)
-                puts "read yaml path:#{yml_path}"
+                # puts "read yaml path:#{yml_path}"
                 json = YAML.load_file(yml_path)
-                puts "read json:#{json}"
+                # puts "read json:#{json}"
                 return json
             end
             return {}
